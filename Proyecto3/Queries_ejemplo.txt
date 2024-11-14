@@ -1,0 +1,8 @@
+485910 Patron Color Rojo
+591820 Personaje con imagen trasladada
+603090 Patron Color Blanco
+682770 Patron Color Rubio
+20611520 Patron estilo de dibujo
+1188500 Personaje con elementos agregados
+1329670 Patron color Rosa
+33517140 Patron esquema de colores
