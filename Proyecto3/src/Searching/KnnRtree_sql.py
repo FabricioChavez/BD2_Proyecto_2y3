@@ -1,5 +1,5 @@
 import psycopg2
-
+import pandas as pd
 
 # Conexión a la base de datos
 conn= psycopg2.connect(
@@ -102,7 +102,7 @@ def export_to_csv(features, csv_file):
 
 
 
-def execute_single_query(vector , k=5):
+def execute_single_query( directory_path, vector , k=5):
     set_path()
     vector_str = ', '.join(map(str, vector))
     sql_str =f"""
