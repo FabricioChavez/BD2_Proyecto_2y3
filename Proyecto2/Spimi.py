@@ -19,16 +19,15 @@ import shelve
 
 
 class SPIMIIndex:
-    def __init__(self, collection, memory_limit=10**6):  # memory limit in bytes
+    def __init__(self, memory_limit=10**6):  # memory limit in bytes
         self.memory_limit = memory_limit
         self.dictionary = None
         self.output_files = []
-        self.doc_norms = {}
         self.final_index_file = (
             "final_index.txt"  # Archivo donde se almacenará el índice invertido final
         )
         self.finalPosition = []
-        self.collection = collection
+        self.collection_size = 0
 
     def new_file(self, index):
         filename = f"block_{index}.txt"
@@ -57,11 +56,9 @@ class SPIMIIndex:
         tokens = [stemmer.stem(word) for word in tokens_filtrados]
         return tokens
 
-    def parse_docs(self, documents):
-        for doc_id, text in enumerate(documents):
-            tokens = self.preprocess_text(text)
-            for term in tokens:
-                yield term, doc_id
+    def parse_docs(self, content):
+        tokens = self.preprocess_text(content)
+        return tokens
 
     def add_to_dictionary(self, dictionary, term):
         dictionary[term] = []
@@ -92,7 +89,7 @@ class SPIMIIndex:
         open_files = [open(f, "r", encoding="utf-8") for f in self.output_files]
         heap = []
         total_blocks = len(self.output_files)
-        total_collection = self.collection
+        total_collection = self.collection_size
         # Inicializar el heap con el primer término de cada bloque
         for i, f in enumerate(open_files):
             line = f.readline().strip()
@@ -181,17 +178,15 @@ class SPIMIIndex:
         for f in self.output_files:
             os.remove(f)
 
-    def Spimi_invert(self, token_stream):
-        self.dictionary = self.new_dictionary()
-        output_file = self.new_file(len(self.output_files))
-        for term, doc_id in token_stream:
+    def Spimi_invert(self, content, doc_id):
+        for term in self.parse_docs(content):
             postings_list = self.dictionary.get(term, [])
             # Escribir el bloque al disco si excede el límite de memoria
             if sys.getsizeof(self.dictionary) > self.memory_limit:
                 tf_dict = self.calculate_tf_weights(self.dictionary)
-                self.write_block_to_disk(output_file, tf_dict)
+                self.write_block_to_disk(self.output_file, tf_dict)
                 self.dictionary = self.new_dictionary()  # Reset dictionary
-                output_file = self.new_file(
+                self.output_file = self.new_file(
                     len(self.output_files)
                 )  # Nuevo archivo de salida
 
@@ -201,20 +196,37 @@ class SPIMIIndex:
             postings_list = self.dictionary[term]
             self.add_to_postings_list(postings_list, doc_id)
 
+    def construct_index(self, document_chunks):
+        print("Indexing...")
+        collection_size = 0
+        self.dictionary = self.new_dictionary()
+        self.output_file = self.new_file(len(self.output_files))
+        doc_id = 0
+        for chunk in document_chunks:
+            for content in chunk:
+                self.Spimi_invert(content, doc_id)
+                doc_id += 1
+                collection_size += 1
+        print("collection_size", collection_size)
+        self.collection_size = collection_size
+
         # Escribir el último bloque al disco
         if self.dictionary:
             tf_dict = self.calculate_tf_weights(self.dictionary)
-            self.write_block_to_disk(output_file, tf_dict)
-
-    def construct_index(self, documents):
-        token_stream = self.parse_docs(documents)
-        print("Indexing...")
-        self.Spimi_invert(token_stream)
+            self.write_block_to_disk(self.output_file, tf_dict)
+            self.dictionary = None
         print("Merging blocks...")
         merged_index = self.merge_blocks()
         return merged_index
 
     def retrieve_index(self, query):
+        # extraer la metadata
+        with open(self.final_index_file, "r", encoding="utf-8") as file:
+            # leer la primera línea
+            line = file.readline().strip()
+            total_blocks, total_collection = map(int, line.split(", "))
+            self.collection_size = total_collection
+        file.close()
         # preprocesar la consulta
         query = self.preprocess_text(query)
         query_tf_idf = {}
@@ -229,7 +241,7 @@ class SPIMIIndex:
             data_block = self.specific_block(block[0], block[1])
             data_block = self.parse_block(data_block)
             # calcular tf-idf
-            idf = math.log10(self.collection / len(data_block[term]))
+            idf = math.log10(self.collection_size / len(data_block[term]))
             query_tf_idf[term] = math.log10(1 + query_tf[term]) * idf
             query_length += query_tf_idf[term] ** 2
 
