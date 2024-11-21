@@ -3,14 +3,17 @@ import os
 import numpy as np
 import pandas as pd
 import sys
-from query_handler import QueryHandler
 import psycopg2
 from faiss import IndexLSH as lsh
 
+import time
+
+t1 = time.time()
 project_path= os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(project_path)
 print(project_path)
 
+from Proyecto2.Spimi import SPIMIIndex
 from Proyecto3.src.Searching import KnnSeq
 from Proyecto3.src.Searching import KnnRtree_sql as knnRtree
 from Proyecto3.src.Experiments import Experiments_local as processing
@@ -18,15 +21,20 @@ from Proyecto3.src.Experiments import Experiments_global as processing_g
 
 app = Flask(__name__)
 
-portraits_path = os.path.join("D:/", "Documents", "datasets", "portraits")
+# Proyecto 2
+memory_limit = 500000
+spimi_index = SPIMIIndex(memory_limit=memory_limit)
+
+# Proyecto 3
+portraits_path = os.path.join("D:/", "Documents-D", "datasets", "portraits")
 
 # processed local features 
-load_path = os.path.join("D:/", "Documents", "datasets", "data", "descriptors_color_2_opencv.npz")
+load_path = os.path.join("D:/", "Documents-D", "datasets", "data", "descriptors_color_2_opencv.npz")
 features = np.load(load_path)
 # feature vectors
 index = 'data/index_dict_color_cv.npz'
 vector ='data/feature_vector_color_cv.npy'
-path = "D:/Documents/datasets/"
+path = "D:/Documents-D/datasets/"
 data_dict = np.load(os.path.join(path,index), allow_pickle=True)
 index_dict = data_dict['arr_0'].item()
 feature_vector = np.load(os.path.join(path,vector))
@@ -44,7 +52,8 @@ inverted_dict = {index:name for name , index in index_dict.items()}
 def process_results(result , inverted_dict):
     return [os.path.join(portraits_path, inverted_dict[idx] +".jpg" ) for idx in result ]
 
-
+t2 = time.time()
+print("TIME: ", t2 - t1, " --------------------")
 # if __name__ == "__main__":
 #     app.run(debug=True)
 
@@ -62,15 +71,15 @@ def text_query_own_implementation():
     k = data["k"]
 
     # hacer consulta
-    path = "../Proyecto2/"
-    qh  = QueryHandler(path + "final_index.txt", path + "index_pointer.txt", 70917)
-    lista = qh.retrieve_index(query)
+    # path = "../Proyecto2/"
+    # qh  = QueryHandler(path + "final_index.txt", path + "index_pointer.txt", 70917)
+    lista = spimi_index.retrieve_index(query)
     lista = dict(list(lista.items())[:k])
 
     # cargar sólo ciertas filas del csv, con desfase de 1 por el header
     rows_to_read = list(lista.keys())
     rows_to_read = [0] + [row + 1 for row in rows_to_read]
-    df = pd.read_csv(path + "data/data_indexed.csv", 
+    df = pd.read_csv("../Proyecto2/data/data_indexed.csv", 
         usecols=["doc_id", "title", "description", "tags"], 
         skiprows=lambda x: x not in rows_to_read)
     df.set_index("doc_id", inplace = True)
@@ -108,11 +117,11 @@ def text_query_postgres():
 
     conn = psycopg2.connect(
         host="localhost",
-        dbname="DBNAME", 
+        dbname="PROJECT_BD2", 
         user="postgres",
-        password="PASSWORD",
+        password="jajaja",
         port="5432",
-        options="-c search_path=SCHEMANAME"
+        options="-c search_path=parte2"
     )
 
     try:

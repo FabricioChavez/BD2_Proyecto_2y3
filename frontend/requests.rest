@@ -1,0 +1,37 @@
+POST http://localhost:5000/text-query/own-implementation
+content-type: application/json
+
+{
+    "query":"kimetsu Tanjirou Nezuko",
+    "k": 10
+}
+
+###
+
+POST http://localhost:5000/text-query/postgres
+content-type: application/json
+
+{
+    "query":"kimetsu Tanjirou Nezuko",
+    "k": 10
+}
+
+###
+
+POST http://localhost:5000/image-query/knn-seq
+content-type: application/json
+
+{
+    "query":"3-xoggz0u.jpg",
+    "k":5
+}
+
+###
+
+POST http://localhost:5000/image-query/lsh
+content-type: application/json
+
+{
+    "query":"3-xoggz0u.jpg",
+    "k":5
+}
