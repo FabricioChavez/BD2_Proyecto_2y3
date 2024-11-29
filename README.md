@@ -36,7 +36,7 @@ class SPIMIIndex:
         self.finalPosition = []
         self.collection_size = 0
 ```
-#### 1.1.2. ** Métodos de la clase **
+#### 1.1.2. **Métodos de la clase**
 - Además la clase posee métodos de `new_file`, el cual crea un nuevo archivo para almacenar los bloques de términos y cada bloque corresponde a un conjunto de términos y sus listas de postings, de `new_dictionary`, la cual un nuevo diccionario ordenado para almacenar los términos y sus postings en memoria antes de ser escritos a disco.  
 ```python
 def new_file(self, index):
@@ -317,6 +317,131 @@ def specific_block(self, position, size):
 ```
 - Este método obtiene un bloque específico del archivo de índice final, según posición y tamaño.
 
+### 2.*Ejecución de consultas **
+- Antes de proceder con la ejemplificación de como se realizan las consultas, explicaremo como se dió la creación de la tabla en PostgreSQL para almacenar información sobre mangas, con los siguientes campos:
+- 
+- **title**: Título del manga.
+- **description**: Descripción del manga.
+- **rating**: Calificación del manga.
+- **year**: Año de publicación.
+- **tags**: Etiquetas asociadas al manga.
+- **cover**: URL de la imagen de portada.
+- **merge**: Texto que se utilizará para el índice de búsqueda.
+
+### 2.1. Creación de la Tabla `manga`
+
+```sql
+CREATE TABLE IF NOT EXISTS manga( 
+  title text,
+  description text, 
+  rating numeric,
+  year numeric,
+  tags text, 
+  cover text, 
+  merge text
+);
+```
+
+### GIN en PostgresSQL
+
+#### 1. Creación del Índice GIN
+El índice GIN en PostgreSQL lo utilizamos para la mejora de eficiencia de las búsquedas de texto completo dentro de bd. Al aplicar dicho índice a una columna tsvector, como en el caso de la columna `merge_vector` en la tabla manga, PostgreSQL crea una estructura invertida que mapea términos de texto a los registros (documentos) que los contienen. Esto permite realizar búsquedas rápidas y eficientes en grandes volúmenes de datos textuales, como las descripciones, etiquetas y otros campos relacionados con los mangas.
+
+```sql
+-- Agregar columna vectorizada a la tabla
+alter table manga add column merge_vector tsvector;
+-- Crear un índice GIN para la columna merge_vector
+CREATE INDEX manga_merge_index ON manga USING GIN(merge_vector);
+```
+
+#### 2. Generación tsvector
+Para cada registro de manga, se genera un tsvector combinando el texto de la columna merge utilizando la función to_tsvector('english', ...). Se hace para capturar la información en el texto de la columna merge. Al aplicarlo, PostgreSQL convierte el texto en un formato que facilita las búsquedas de texto completo, permitiendo consultas más rápidas y eficientes.
+```sql
+-- Generar tsvector para la columna merge
+UPDATE manga SET merge_vector = to_tsvector('english', merge);
+```
+
+#### 3. **Procesamiento de la consulta :**
+%TODO
+ Para procesar la consulta con similitud de coseno seguimos los siguientes pasos:
+ 1. Obtención de términos de cadda query
+ 2. Buscamos los ttérminso..
+ 3. Computamos el peso (tf_idf) del término en el documento
+ 4. Añadimos el documento dentro de los scores
+ 5. 
+## Frontend
+El frontend...
+%TODO
+
+Para realizar el diseño del frontend se utilizó...
+### 1. Diseño de la GUI
+Esta diseñado para ...
+
+1. **Campo de Búsqueda**
+2. 
+
+## Experimentación
+
+### Índice Invertido
+- Se presenta una comparativa en tiempos de ejecución de cada implementación en función de # de registros. En todos los casos, la cantidad de elementos recuperados en e
+| Número de Registros | MyIndex        | PostgreSQL           |
+|---------------------|----------------|----------------------|
+| N = 1000            |                |                      |
+| N = 2000            |                |                      |
+| N = 4000            |                |                      |
+| N = 8000            |                |                      |
+| N = 16000           |                |                      |
+
+%TODO
+
+### Interpretación de Resultados
+#### Comparación de Tiempos de Ejecución
+Los resultados obtenidos de las comparaciones de tiempo de ejecución entre las implementaciones MyIndex y PostgreSQL ....  A continuación, se detallan las observacioneS:
+
+- **MyIndex**:
+- **PostgreSQL**:
+
+
+#### Gráfica Comparativa de tiempos de ejecucición 
+<img src=" " width="800px">
+##### Interpretación de la Gráfica
+- En términos de :
+- Escabilidad
+- Eficiencia 
+- Adaptación de Índice
+
+### Índice Multidimensional
+- A continuación, se muestra una comparativa en tiempos de ejecución de cada implementación KNN (K-Nearest Neighbors) según # de registros. En todos los casos, se mantendrá el K =8.
+
+| N          | KNN Sequential | KNN Rtree   | KNN HighD  |
+|------------|----------------|-------------|------------|
+| N=1000     |                |             |            |
+ N=2000      |                |             |            |
+| N=4000     |                |             |            |
+| N=8000     |                |             |            | 
+| N=10000    |                |             |            |
+| N=12000    |                |             |            |
+| N=14000    |                |             |            |
+
+
+### Interpretación de Resultados
+#### Comparación de Tiempos de Ejecución
+- **Secuencial**:
+- **KNN-RTree**:
+- **KNN-HighD**:
+
+#### Gráfica Comparativa de tiempos de ejecución 
+<img src=" " width="800px">
+##### Interpretación de la Gráfica
+En términos de :
+- Escabilidad
+- Eficiencia 
+- Adaptación de Índice
+
+## Integrantes
+|                    **Paolo Medrano Terán**                   |                          **Sebastián Chu**                          |                         **Fabricio Chavez**                          |                         **Andrea Coa**                         |                       **Jesús Ore Eguzquiza**                       |
+|:---------------------------------------------------------------:|:-------------------------------------------------------------------:|:-------------------------------------------------------------------:|:------------------------------------------------------------------:|:-------------------------------------------------------------:|
+| <a href="https://github.com/paolomedrano04" target="_blank">`github.com/paolomedrano04`</a> | <a href="https://github.com/ChuSebastian" target="_blank">`github.com/ChuSebastian`</a> | <a href="https://github.com/FabricioChavez" target="_blank">`github.com/FabricioChavez`</a> | <a href="https://github.com/Andrea-Coa" target="_blank">`github.com/Andrea-Coa`</a> | <a href="https://github.com/EgusquizaOreJesus" target="_blank">`github.com/EgusquizaOreJesus"`</a> |
 
 # Links de data
 ## Proyecto 3
