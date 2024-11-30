@@ -67,8 +67,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="topK" class="form-label">Top K Resultados:</label>
-                        <input type="number" class="form-control" id="topK" name="topK" required placeholder="Ejemplo: 5" min="1" value="{{ topK }}">
-                    </div>
+                        <input type="number" class="form-control" id="topK" name="topK" required placeholder="Ejemplo: 5.5" min="0" step="0.0001" value="{{ topK }}">                    </div>
                     <div class="d-flex gap-3">
                         <button type="submit" class="btn btn-primary btn-full-width" name="source" value="secuencial">KNN Secuencial</button>
                         <button type="submit" class="btn btn-primary btn-full-width" name="source" value="rtree">KNN Rtree</button>

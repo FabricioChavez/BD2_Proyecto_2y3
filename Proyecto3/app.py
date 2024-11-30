@@ -12,6 +12,7 @@ from time import time
 from faiss import IndexLSH as lsh
 from src.Searching import KnnSeq
 from src.Searching import KnnRtree_sql as knnRtree
+from src.Searching import RangeSearch
 from src.Experiments import Experiments_local as processing
 from src.Experiments import Experiments_global as processing_g
 
@@ -53,6 +54,32 @@ images_per_page = 9
 execution_time = 0
 
 app = Flask(__name__)
+
+def range_query(query, radius):
+    print(query, radius)
+
+    # buscar si existe la imagen
+    query_path = os.path.join(portraits_path , query)
+    print(query_path)
+    if not os.path.exists(query_path):
+        print("path doesn't exist")
+        return []
+    
+    _, query = processing.process_image_opencv(query_path)
+
+    try:
+        results = list( RangeSearch.find_knn_cosine_by_radio(
+            normalized_centroids=normalized_features, 
+            index_map=index_dict, 
+            query_centroid=query, 
+            directory_path=portraits_path, 
+            radius=radius
+        ))
+        return results
+    except Exception as e:
+        print("Failed range query. Error: " + str(e))
+        return []
+
 
 def image_query_knn_sequential(query, k):
 
@@ -139,7 +166,7 @@ def search():
             return render_template("index.html", results=["Error: Consulta o topK vacíos."])
 
         try:
-            topK = int(topK)
+            # topK = int(topK)
             if source == "load_next_page":
                 page += 1
                 if len(results) <= images_per_page * ( page + 1):
@@ -155,19 +182,26 @@ def search():
                 page = 0
                 prev_page = False
                 if source == "secuencial":
+                    topK = int(topK)
                     t1 = time()
                     results = image_query_knn_sequential(image_name, topK)
                     t2 = time()
                 elif source == "rtree":
+                    topK = int(topK)
                     t1 = time()
                     results = image_query_rtree_postgres(image_name, topK)
                     t2 = time()
                 elif source == "lsh":
+                    topK = int(topK)
                     t1 = time()
                     results = image_query_lsh(image_name, topK)
                     t2 = time()
                 elif source == "rango":
-                    pass
+                    topK= float(topK)
+                    t1 = time()
+                    results = range_query(image_name, topK)
+                    t2 = time()
+                    print("Range query #results: ", len(results))
                 else:
                     results = []
 

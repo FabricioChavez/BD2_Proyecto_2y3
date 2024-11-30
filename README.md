@@ -370,15 +370,27 @@ UPDATE manga SET merge_vector = to_tsvector('english', merge);
  4. Añadimos el documento dentro de los scores
  5. 
 ## Frontend
-El frontend...
-%TODO
+Se utilizó Flask para crear 3 apps: una para la búsqueda textual, una para búsqueda de imágenes (KNN secuencial, KNN por rango, KNN Rtree, KNN LSH), y otra para el índice invertido de imágenes.
 
-Para realizar el diseño del frontend se utilizó...
-### 1. Diseño de la GUI
-Esta diseñado para ...
 
-1. **Campo de Búsqueda**
-2. 
+### 2. GUI búsqueda de imágenes
+
+Antes de poder usar la búsqueda de imágenes, en `/Proyecto3/src/Searching/KnnRtree_sql.py` debe ingresar sus credenciales para conectarse a la base de datos. Además debe ejecutar el SQL script en `Rtree_Script.sql`. Una vez hecho esto, ejecutar la aplicación.
+
+```bash
+python app.py
+```
+
+Rellenar dos campos:
+
+- Nombre de la imagen: debe ser una de las imágenes del dataset. Escribir sin comillas y con la extensión `.jpg`.
+- TopK: k imágenes más cercanas. En caso se quiera realizar la búsqueda por rango, colocar un radio. Un radio recomendado es 0.5.
+
+![](images/image.png)
+
+La interfaz muestra a lo más 9 imágenes en simultáneo. Si k > 9, tiene la opción de ir a la siguiente página. 
+
+![Búsqueda de TopK con KNN secuencial](images/image2.png)
 
 ## Experimentación
 
@@ -402,7 +414,7 @@ Los resultados obtenidos de las comparaciones de tiempo de ejecución entre las 
 - **PostgreSQL**:
 
 
-#### Gráfica Comparativa de tiempos de ejecucición 
+#### Gráfica Comparativa de tiempos de ejecución 
 <img src=" " width="800px">
 ##### Interpretación de la Gráfica
 - En términos de :
