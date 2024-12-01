@@ -99,7 +99,11 @@ def preprocess_text(self, text):
             final_position = file.tell()
             self.finalPosition.append(final_position)
 ```
-- Finalmente en `SPIMI` tenemos los métodos de `merge_blocks` que  fusiona los bloques indexados y escribe el índice final en un archivo. Utiliza un `heap` para combinar los bloques de manera eficiente, asimismo `retrieve_index` que permite consultar el índice para obtener documentos que coincidan con un término de búsqueda.
+- Finalmente en `SPIMI` tenemos los métodos de `merge_blocks` que  fusiona los bloques indexados y escribe el índice final en un archivo.  Utiliza un heap para combinar los bloques, para manejar gand volumen de datos ordenado.
+- El proceso implica:
+    - Leer las primeras palabras de cada bloque y colocarlas en un heap
+    - Combinar los postings lists de términos iguales en un índice final
+    - Escribir el índice(`final_index.txt`) y un index_pointer, que indica las primeras palabras de cada bloque. Ambos almacenados en estas rutas del proyecto `Proyecto2\final_index.txt` y `Proyecto2\index_pointer.txt.`
 ``` python
 def merge_blocks(self):
     open_files = [open(f, "r", encoding="utf-8") for f in self.output_files]
@@ -145,7 +149,12 @@ def merge_blocks(self):
         f.close()
     for f in self.output_files:
         os.remove(f)
-
+```
+- Luego tenemos el método `etrieve_index` que recibe parámetros para consultar el índidce final para obtener documentos coincidentes en búsqueda según término. El proceso implementado incluye :
+    - Preprocesar la consulta para calcular  TF-IDF de los términos.
+    - Localizar los bloques relevantes mediante búsqueda binaria en index_pointer.
+    -Combinar los p.list de los términos relevantes y calcular los puntajes de similitud TF-IDF entre la query y los documentos.
+``` python
 def retrieve_index(self, query):
     query = self.preprocess_text(query)
     score = {}
@@ -166,6 +175,7 @@ def retrieve_index(self, query):
         score[doc_id] /= query_length * math.sqrt(sum(score.values()))
     return dict(sorted(score.items(), key=lambda item: item[1], reverse=True))
 ```
+
 #### 1.1.3. ** SPIMI Invertido **
 - El método `Spimi_invert` implementa un índice invertido SPIMI que divide el proceso de indexación en bloques para mejorar la eficiencia. Utiliza TF-IDF para ponderar los términos y calcular la importancia relativa de cada término en cada documento. Si el tamaño del diccionario excede el límite de memoria (`memory_limit`), escribe el bloque en disco y reinicia el diccionario.
 ```python
@@ -328,7 +338,7 @@ def specific_block(self, position, size):
 - **cover**: URL de la imagen de portada.
 - **merge**: Texto que se utilizará para el índice de búsqueda.
 
-### 2.1. Creación de la Tabla `manga`
+### 2.1. Creación de la Tabla `manga.sql`
 
 ```sql
 CREATE TABLE IF NOT EXISTS manga( 
@@ -361,17 +371,92 @@ Para cada registro de manga, se genera un tsvector combinando el texto de la col
 UPDATE manga SET merge_vector = to_tsvector('english', merge);
 ```
 
-#### 3. **Procesamiento de la consulta :**
-%TODO
- Para procesar la consulta con similitud de coseno seguimos los siguientes pasos:
- 1. Obtención de términos de cadda query
- 2. Buscamos los ttérminso..
- 3. Computamos el peso (tf_idf) del término en el documento
- 4. Añadimos el documento dentro de los scores
- 5. 
-## Frontend
-Se utilizó Flask para crear 3 apps: una para la búsqueda textual, una para búsqueda de imágenes (KNN secuencial, KNN por rango, KNN Rtree, KNN LSH), y otra para el índice invertido de imágenes.
+## Índice Multidimensional
+### KNN Secuencial
+- El algoritmo K-Nearest Neighbors (KNN) se implementó para realizar búsquedas eficientes de objetos similares a una consulta, utilizando la métrica de similitud de coseno. A continuación se detalla lo desarrollado para el proyecto:
+1. Requirements
+- Se utilizaron las siguientes bibliotecas para realizar la extracción de características y posterior manipulación de imágenes.
+``` python
+%pip install opencv-python matplotlib numpy scipy tqdm scikit-learn Rtree
+```
+2. Configuración
+- Se establecieron los paths de imágenes de la carpeta `portraits`. Imágenes que serán procesadas para generar un vector caractéristico por cada una
+``` python
+directory_path = os.path.join("F:/", "DB2_Proyect", "portraits")
+images_names = os.listdir(directory_path)
+``` 
+#### Extracción de características:
+- En este caso, se utilizó una librería existente para generar un vector característico para cada imagen. Este vector se encarga de encapsular información de cada objeto, como bordes, texturas y colores.
 
+-Se implementaron tres tipos de características locales y globales para capturar información relevante, utilizando la biblioteca OpenCV para HOG y scikit-image para LBP, junto con histogramas de color calculados directamente:
+
+  - Histogramas de Gradientes Orientados (HOG): Capturan información sobre bordes y formas mediante gradientes de intensidad en las celdas de la imagen.
+ - Patrones Binarios Locales (LBP): Extraen patrones texturales en regiones pequeñas de la imagen.
+ - Histogramas de Color: Resumen la distribución de colores en cada canal RGB.
+Para cada imagen:
+  1. Se dividió en celdas de igual tamaño (por ejemplo, 64x64 píxeles).
+  2. En cada celda, se extrajeron los tres tipos HOG, LBP y de color.
+  3. Finalmente, se concatenaron estas características en un único vector   característico.
+```  python
+def process_image_opencv(image_path):
+    # Procesamiento detallado para dividir en celdas y extraer HOG, LBP y color
+    ...
+    return image_path, feature_matrix.flatten()
+``` 
+#### Generación de vectores para consultas 
+- Se diseñó un pipeline para generar vectors característicos de las imágenes de consulta utilizando el mismo procedimiento de extracción. El vector de consulta se normaliza para permitir una comparación eficiente con los vectores almacenado.
+
+```python
+normalized_features = prepare_knn_model(feature_vector)
+query_path = os.path.join(directory_path, "10-luyjxyh.jpg")
+_, query = process_image_opencv(query_path)
+``` 
+- Esta normalización asegura que la similitud de coseno sea independiente de la magnitud de los vectores.
+
+#### Implementación 
+
+El algoritmo KNN se implementó con dos métodos:
+
+- Búsqueda KNN: Se utilizó una cola de prioridad para encontrar los k vecinos más cercanos. Encargado de recupera los k objetos más cercanos al vector de consulta en términos de similitud de coseno.
+- Proceso:
+1. Normalizar el vector de consulta y los vectores almacenados.
+2. Calcular las similitudes mediante el producto punto.
+3. Ordenar las similitudes y seleccionar los k valores más altos.
+
+```python
+def find_knn_cosine_optimized(normalized_centroids, query_centroid, k=5):
+    query_norm = np.linalg.norm(query_centroid)
+    normalized_query = query_centroid / query_norm
+    similarities = normalized_centroids @ normalized_query
+    top_k_indices = np.argsort(-similarities)[:k]
+    return top_k_indices
+```
+
+- Búsqueda por Rango: Se seleccionaron objetos con similitudes de coseno dentro de un rango específico.
+
+``` python
+def find_knn_cosine_by_radio(normalized_centroids, query_centroid, radius):
+    query_norm = np.linalg.norm(query_centroid)
+    normalized_query = query_centroid / query_norm
+    similarities = normalized_centroids @ normalized_query
+    for idx, similarity in enumerate(similarities):
+        if similarity >= radius:
+            yield idx
+```
+- Para presentar los resultados se muestra las imágenes recuperadas en una cuadrícula. Cada imagen se acompaña de su nombre como título.
+``` python
+def display_images_in_grid(image_paths, grid_rows, grid_cols):
+    fig, axes = plt.subplots(grid_rows, grid_cols, figsize=(grid_cols * 2, grid_rows * 2))
+    axes = axes.flatten()
+    for i, image_path in enumerate(image_paths):
+        image = io.imread(image_path)
+        axes[i].imshow(image)
+        axes[i].axis('off')
+        axes[i].set_title(os.path.basename(image_path))
+    plt.tight_layout()
+    plt.show()
+```
+- Se puede visualizar la ejecución correcta de ambas variaciones del algortimo KNN implementado en `p3_1_knnSeq.ipynb` en el apartado del Proyecto 3.
 
 ### 2. GUI búsqueda de imágenes
 
