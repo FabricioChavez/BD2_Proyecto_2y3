@@ -81,3 +81,46 @@ def find_knn_cosine_optimized(normalized_centroids, index_map, query_centroid, d
     
     return knn_results
 
+def find_knn_cosine_by_radio(normalized_centroids, index_map, query_centroid, directory_path, radius):
+    """
+    Encuentra los vecinos dentro de un radio utilizando similitud de coseno optimizada.
+    Retorna un generador que produce las rutas de imágenes de los vecinos encontrados.
+
+    Parámetros:
+    - normalized_centroids (np.ndarray): Matriz de centroides normalizados.
+    - index_map (dict): Mapa de nombres de imágenes a índices en normalized_centroids.
+    - query_centroid (np.ndarray): Vector de consulta (no normalizado).
+    - directory_path (str): Ruta al directorio donde se encuentran las imágenes.
+    - radius (list o float): Umbral(es) de similitud de coseno para incluir vecinos.
+
+    Retorna:
+    - generator: Generador que produce rutas de imágenes dentro del radio.
+    """
+    # Asegurarse de que radius sea una lista
+    if not isinstance(radius, (list, tuple)):
+        radius = [radius]
+
+    # Normalizar el vector de consulta
+    query_norm = np.linalg.norm(query_centroid)
+    if query_norm == 0:
+        raise ValueError("El vector de consulta tiene norma cero.")
+    normalized_query = query_centroid / query_norm
+
+    # Calcular similitudes de coseno como producto punto
+    similarities = normalized_centroids @ normalized_query
+
+    # Crear mapa inverso para obtener nombres a partir de índices
+    inv_index_map = {idx: name for name, idx in index_map.items()}
+
+    # Iterar sobre los radios
+    for r in radius:
+        print(f"Buscando imágenes con radio: {r}")
+        # Iterar sobre las similitudes y filtrar por radio
+        for idx, similarity in enumerate(similarities):
+            if similarity <= r:  # Comparar con cada radio individualmente
+                # Obtener ruta de la imagen correspondiente
+                if idx in inv_index_map:
+                    image_path = os.path.join(directory_path, inv_index_map[idx] + ".jpg")
+                    yield image_path  # Yield uno a la vez
+                else:
+                    raise KeyError(f"Índice {idx} no encontrado.")
