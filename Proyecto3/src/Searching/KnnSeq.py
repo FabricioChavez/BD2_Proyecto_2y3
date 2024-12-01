@@ -80,3 +80,4 @@ def find_knn_cosine_optimized(normalized_centroids, index_map, query_centroid, d
     knn_results = [os.path.join(directory_path, inv_index_map[idx] + ".jpg") for idx in top_k_indices]
     
     return knn_results
+
