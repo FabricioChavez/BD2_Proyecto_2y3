@@ -25,18 +25,23 @@ def find_knn_cosine_by_radio(normalized_centroids, index_map, query_centroid, di
     # Calcular similitudes de coseno como producto punto
     similarities = normalized_centroids @ normalized_query
 
+#Aquí viene 
+    # Ordenar las similitudes y sus índices correspondientes
+    sorted_indices = np.argsort(-similarities)  # mayor a menor
+    sorted_similarities = similarities[sorted_indices]  # similarities ordenadas
 
-#Aquí vienen las variaciones para el rango
 
-    #mapa inverso para obtener nombres a partir de índices
     inv_index_map = {idx: name for name, idx in index_map.items()}
 
-    # for sobre las similitudes y filtrar por radio
-    # results = []
-    for idx, similarity in enumerate(similarities):
-        if similarity <= radius:
-            # ruta con indice 
-            image_path = os.path.join(directory_path, inv_index_map[idx] + ".jpg")
-            yield image_path  # yield uno a la vez
-            # results.append(image_path)
-            
+    # for en radios
+    for r in radius:
+        print(f"Buscando imágenes con radio: {r}")
+        # similaridades 
+        for i, similarity in zip(sorted_indices, sorted_similarities):
+            if similarity >= r:  #si si ya no cumple el radio
+            # la ruta
+                if i in inv_index_map:
+                    image_path = os.path.join(directory_path, inv_index_map[i] + ".jpg")
+                    yield image_path  # Yield uno a la vez
+                else:
+                    raise KeyError(f"Índice {i} no encontrado.")
