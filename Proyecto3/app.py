@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request, send_from_directory
-import pandas as pd
 import os
-import sys
 import numpy as np
 from time import time
 
@@ -34,7 +32,7 @@ normalized_features = KnnSeq.prepare_knn_model(feature_vector)
 
 # lsh
 d = len(feature_vector[0])
-nbits =512
+nbits =1024 # antes 512
 lsh_index = lsh(d, nbits)
 lsh_index.add(feature_vector)
 
