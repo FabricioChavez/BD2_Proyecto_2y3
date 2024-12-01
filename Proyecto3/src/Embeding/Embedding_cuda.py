@@ -73,25 +73,43 @@ def generating_visual_words(data, n_clusters=10000, save_path='visual_words.npz'
     print(f"\nTiempo total: {end_time - start_time:.2f} segundos")
     return visual_words_numpy
 
+
+
+
+
+
 # Uso
 loading_path = "/mnt/d/Semestre_2024_2_CS/BD_2/Projects/BD2_Project_3/Proyecto3/data"
 file_name = 'features_data_2.npz'
-visual_words_file = 'visual_words_500_v2.npz'
+
 path = os.path.join(loading_path, file_name)
-output_path = os.path.join(loading_path, visual_words_file)
+
+
+
+
 
 loaded_data = np.load(path, allow_pickle=True)
 total_features_index = loaded_data["total_features_index"].item()
 total_features = loaded_data["total_features"]
 
-normalized_features = normalize_features_gpu(total_features, batch_size=50000)
 
-inicio = time.time()
-visual_words = generating_visual_words(
-    normalized_features,
-    save_path=output_path,
-    n_clusters=500,
-    batch_size=50000
-)
-fin = time.time()
-print(f"Tiempo total de procesamiento: {fin - inicio:.2f} segundos")
+
+size = 302652
+sizes = np.linspace(1000, size, num=10, dtype=int)
+
+for sample_sizes in sizes:
+
+    visual_words_file = f'visual_words_500_v3_{sample_sizes}.npz'
+    output_path = os.path.join(loading_path, visual_words_file)
+    normalized_features = normalize_features_gpu(total_features, batch_size=50000)
+    normalized_features = normalized_features[:sample_sizes*64]
+
+    inicio = time.time()
+    visual_words = generating_visual_words(
+        normalized_features,
+        save_path=output_path,
+        n_clusters=500,
+        batch_size=50000
+    )
+    fin = time.time()
+    print(f"Tiempo total de procesamiento: {fin - inicio:.2f} segundos")
