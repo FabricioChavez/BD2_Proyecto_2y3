@@ -35,15 +35,24 @@
         .btn-full-width {
             width: 100%;
         }
-        
+        table {
+            margin-top: 20px;
+            width: 100%;
+            text-align: left;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
         #query::placeholder {
-            color: rgb(190, 190, 190); /* Cambiar el color del placeholder a rojo */
+            color: rgb(190, 190, 190);
         }
-        
         #topK::placeholder {
-            color: rgb(190, 190, 190); /* Cambiar el color del placeholder a rojo */
+            color: rgb(190, 190, 190);
         }
-
     </style>
 </head>
 <body>
@@ -52,7 +61,7 @@
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-8">
             <div class="form-container">
-                <h3 class="text-center">SPIMI & POSTGRES</h3>
+                <h1 class="text-center">SPIMI & POSTGRES</h1>
                 <form action="/" method="POST">
                     <div class="mb-3">
                         <label for="query" class="form-label">Query (Palabras Clave):</label>
@@ -69,20 +78,31 @@
                 </form>
             </div>
 
-            {% if results and not results[0].startswith('Error:') %}
-                <div class="card">
-                    <h5 class="card-title">Resultados:</h5>
-                    <ul class="list-group">
-                        {% for result in results %}
-                            <li class="list-group-item">{{ result }}</li>
-                        {% endfor %}
-                    </ul>
+            {% if query_time is not none %}
+                <div class="alert alert-info mt-3">
+                    <strong>Tiempo de consulta:</strong> {{ query_time }} segundos.
                 </div>
             {% endif %}
 
-            {% if results and results[0].startswith('Error:') %}
-                <div class="alert alert-danger mt-3">
-                    <strong>Error:</strong> {{ results[0] }}
+            {% if results_df %}
+                <div class="card">
+                    <h3 class="card-title">Resultados:</h3>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Texto (merge)</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in results_df %}
+                                <tr>
+                                    <td>{{ row['merge'] }}</td>
+                                    <td>{{ row['score'] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             {% endif %}
         </div>
