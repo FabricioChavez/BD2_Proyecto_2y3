@@ -16,12 +16,12 @@ try:
 except Exception as e:
     df = None
 
-# Configuración de PostgreSQL --> modificar dbname y password para probar
+# Configuración de PostgreSQL
 db_config = {
-    'dbname': 'dbname',
-    'user': 'postgres',
-    'password': 'password',
     'host': 'localhost',
+    'dbname': 'p2g6s1',
+    'user': 'postgres',
+    'password': '1234',
     'port': '5432'
 }
 
@@ -76,7 +76,7 @@ def search():
                 raise ValueError("Fuente de búsqueda desconocida.")
 
             end_time = time.time()
-            query_time = round(end_time - start_time, 3)
+            query_time = round((end_time - start_time) * 1000, 3)
 
         except Exception as e:
             results = [f"Error: {str(e)}"]
