@@ -706,7 +706,14 @@ def execute_single_query(vector, k=5):
 - Partiendo del hecho de que un índice para espacios vectoriales reduce
 su eficiencia con dimensiones muy altas (maldición de dimensionalidad) se experimentó con formas para mitigar este problema orientado a nuestro proyecto.Se trabajó con LSH(Locality Sensitive Hashing) y con IVF (Inverted File).
 - Las implementaciones respectivas se encuentran estructuradas y definidas en el apartado Proyecto3, ambas se encuentran en entornos de ejecución de Jupyter Notebook, por lo que su visualización es más práctica
-- En base al análisis se concluye que de acuerdo a los resultados 
+- En base al análisis se concluye que de acuerdo a los resultados:
+- **LSH:** No se ve afectado significativamente por la alta dimensionalidad debido a su capacidad de partición con hash. Así termina demostrando ser más robusto y eficiente en términos de consultas e ideal para datos distribuidos.
+- **IVF:** Aunque muestra eficiencia en tamaños pequeños y medianos, puede enfrentarse a problemas en los clusters por las las distancias euclidianas. Esto se evidencia en su desempeño ligeramente inferior frente a LSH en conjuntos de datos más grandes.
+
+**Estrategia de Partición en Descriptores Locales:**
+- Para ambos métodos, excepto RTree, las imágenes fueron divididas en una cuadrícula de 8x8, lo que resulta en 64 celdas por imagen. Cada celda generó un vector descriptor de tamaño 16, con información relevante de bordes, texturas y colores.
+- Esta estrategia permite trabajar de froma compacta y evitar la saturación de dimensiones innecesarias.
+
 ### 2. GUI búsqueda de imágenes
 
 Antes de poder usar la búsqueda de imágenes, en `/Proyecto3/src/Searching/KnnRtree_sql.py` debe ingresar sus credenciales para conectarse a la base de datos. Además debe ejecutar el SQL script en `Rtree_Script.sql`. Una vez hecho esto, ejecutar la aplicación.
@@ -728,34 +735,25 @@ La interfaz muestra a lo más 9 imágenes en simultáneo. Si k > 9, tiene la opc
 
 ## Experimentación
 
-### Índice Invertido
-- Se presenta una comparativa en tiempos de ejecución de cada implementación en función de # de registros. En todos los casos, la cantidad de elementos recuperados en e
-| Número de Registros | MyIndex        | PostgreSQL           |
-|---------------------|----------------|----------------------|
-| N = 1000            |                |                      |
-| N = 2000            |                |                      |
-| N = 4000            |                |                      |
-| N = 8000            |                |                      |
-| N = 16000           |                |                      |
+### Índice Invertido vs PostgreSql
+- Comparativa de ejecución por cada implementación en función del número dde registros. En todos los casos, la cantidad de elementos recuperados será la misma para una buena comparación 
+| **N**      | **My Index Times (s)** | **Postgres Times (s)** |
+|------------|-------------------------|------------------------|
+| N=2000     | 76.63                  | 18.798                |
+| N=4000     | 94.089                 | 18.641                |
+| N=8000     | 92.009                 | 22.481                |
+| N=16000    | 85.475                 | 21.706                |
+| N=32000    | 90.652                 | 19.422                |
+| N=64000    | 91.05                  | 20.282                |
+| N=128000   | 91.149                 | 21.005                |
 
-%TODO
 
 ### Interpretación de Resultados
 #### Comparación de Tiempos de Ejecución
-Los resultados obtenidos de las comparaciones de tiempo de ejecución entre las implementaciones MyIndex y PostgreSQL ....  A continuación, se detallan las observacioneS:
-
-- **MyIndex**:
-- **PostgreSQL**:
-
+Los resultados obtenidos de las comparaciones de tiempo de ejecución entre las implementaciones MyIndex y PostgreSQL demuestran que PostgreSQL es más escalable, eficiente y adaptable para grandes volúmenes de datos, mientras que SPIMI es aceptable para volúmenes pequeños pero muestra limitaciones en escalabilidad y eficiencia.
 
 #### Gráfica Comparativa de tiempos de ejecución 
-<img src="" width="800px">
-
-##### Interpretación de la Gráfica
-- En términos de :
-- Escabilidad
-- Eficiencia 
-- Adaptación de Índice
+<img src="Proyecto2/comparison.png" width="800px">
 
 ### Índice Multidimensional
 - A continuación, se muestra una comparativa en tiempos de ejecución de cada implementación KNN (K-Nearest Neighbors) según # de registros. En todos los casos, se mantendrá el K =8.
