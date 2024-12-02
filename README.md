@@ -386,64 +386,182 @@ directory_path = os.path.join("F:/", "DB2_Proyect", "portraits")
 images_names = os.listdir(directory_path)
 ``` 
 #### Extracción de características:
-- En este caso, se utilizó una librería existente para generar un vector característico para cada imagen. Este vector se encarga de encapsular información de cada objeto, como bordes, texturas y colores.
+- En este caso, se utilizó una librería existente procesada en `Embeding_Local`  para generar un vector característico para cada imagen. Este vector se encarga de encapsular información de cada objeto, como bordes, texturas y colores.
 
 -Se implementaron tres tipos de características locales y globales para capturar información relevante, utilizando la biblioteca OpenCV para HOG y scikit-image para LBP, junto con histogramas de color calculados directamente:
 
   - Histogramas de Gradientes Orientados (HOG): Capturan información sobre bordes y formas mediante gradientes de intensidad en las celdas de la imagen.
+  
+```python
+def extract_hog_features_opencv(gray_cell, orientations=4, pixels_per_cell=(64, 64), cells_per_block=(1, 1)):
+    winSize = (gray_cell.shape[1] // pixels_per_cell[1] * pixels_per_cell[1],
+               gray_cell.shape[0] // pixels_per_cell[0] * pixels_per_cell[0])
+    hog = cv2.HOGDescriptor(_winSize=winSize,
+                            _blockSize=(pixels_per_cell[1]*cells_per_block[1],
+                                        pixels_per_cell[0]*cells_per_block[0]),
+                            _blockStride=(pixels_per_cell[1], pixels_per_cell[0]),
+                            _cellSize=pixels_per_cell,
+                            _nbins=orientations)
+    hog_features = hog.compute(gray_cell).flatten()
+    return hog_features[:orientations]
+```
  - Patrones Binarios Locales (LBP): Extraen patrones texturales en regiones pequeñas de la imagen.
+``` python
+def extract_lbp_features(cell_image, P=8, R=1, method='uniform', bins=4):
+    lbp_features = []
+    for channel in range(3):  # Procesar cada canal RGB
+        lbp = local_binary_pattern(cell_image[:, :, channel], P=P, R=R, method=method)
+        hist, _ = np.histogram(lbp.ravel(), bins=bins, range=(0, bins))
+        hist = hist.astype("float") / (hist.sum() + 1e-6)  # Normalización
+        lbp_features.extend(hist)
+    return np.array(lbp_features)
+```
  - Histogramas de Color: Resumen la distribución de colores en cada canal RGB.
-Para cada imagen:
-  1. Se dividió en celdas de igual tamaño (por ejemplo, 64x64 píxeles).
-  2. En cada celda, se extrajeron los tres tipos HOG, LBP y de color.
-  3. Finalmente, se concatenaron estas características en un único vector   característico.
+``` python
+def extract_color_histogram(cell_image, bins=4):
+    color_hist = []
+    for channel in range(3):  # Procesar cada canal RGB
+        hist, _ = np.histogram(cell_image[:, :, channel], bins=bins, range=(0, 256))
+        hist = hist.astype("float") / (hist.sum() + 1e-6)
+        color_hist.extend(hist)
+    return np.array(color_hist)
+```
+El pipeline de extracción siguió estos pasos:
+1. **División de la imagen:**  
+   Cada imagen se dividió en una cuadrícula de (64x64 px por celda), generando 64 celdas para una imagen de 512x512 píxeles.
+2. **Extracción por celda:**  
+   En cada celda se calculan las características HOG, LBP y los histogramas de color.
+3. **Concatenación:**  
+   Las características de todas las celdas se colocan en un único vector característico, garantizando una representación uniforme de tamaño 1024 por imagen.
 ```  python
-def process_image_opencv(image_path):
-    # Procesamiento detallado para dividir en celdas y extraer HOG, LBP y color
-    ...
-    return image_path, feature_matrix.flatten()
-``` 
-#### Generación de vectores para consultas 
-- Se diseñó un pipeline para generar vectors característicos de las imágenes de consulta utilizando el mismo procedimiento de extracción. El vector de consulta se normaliza para permitir una comparación eficiente con los vectores almacenado.
+def process_image_opencv(image_path, orientations=4, pixels_per_cell=(64, 64), cells_per_block=(1, 1), 
+                         P=8, R=1, lbp_bins=4, color_bins=4):
+    image = io.imread(image_path)
+    if image.shape[:2] != (512, 512) or image.shape[2] != 3:
+        raise ValueError("La imagen debe ser RGB y de tamaño 512x512.")
+    
+    grid_size = 8
+    cell_height, cell_width = image.shape[0] // grid_size, image.shape[1] // grid_size
+    feature_matrix = []
 
+    for row in range(grid_size):
+        for col in range(grid_size):
+            start_y, end_y = row * cell_height, (row + 1) * cell_height
+            start_x, end_x = col * cell_width, (col + 1) * cell_width
+            cell = image[start_y:end_y, start_x:end_x]
+            
+            gray_cell = color.rgb2gray(cell)
+            hog_features = extract_hog_features_opencv(gray_cell, orientations, pixels_per_cell, cells_per_block)
+            lbp_features = extract_lbp_features(cell, P=P, R=R, bins=lbp_bins)
+            color_hist = extract_color_histogram(cell, bins=color_bins)
+            
+            feature_vector = np.concatenate([hog_features, lbp_features, color_hist])
+            feature_matrix.append(feature_vector)
+
+    return image_path, np.array(feature_matrix).flatten()
+```
+- Con esta serie pasos de extracción concluida, se procesaron las imágenes de `portraits`, dando vectores característicos de 1024 dimensiones para cada uno.
+ 
+#### Generación de vectores para consultas 
+- Se diseñó un pipeline para generar los vectors característicos de las imágenes de consulta bajo el mismo procedimiento de extracción.
+Estos vectores fueron guardados en archivos de formatos .npz para eficiencia y rápidez en el proeso de búsqueda y clasificación.
+``` python
+def save_descriptors_npz(descriptors, output_path):
+    np.savez_compressed(output_path, **descriptors)
+```
+El vector de consulta se normaliza para permitir una comparación eficiente con los vectores almacenado.
 ```python
 normalized_features = prepare_knn_model(feature_vector)
 query_path = os.path.join(directory_path, "10-luyjxyh.jpg")
 _, query = process_image_opencv(query_path)
 ``` 
-- Esta normalización asegura que la similitud de coseno sea independiente de la magnitud de los vectores.
+- Esta normalización asegura que la similitud de coseno sea independiente de la magnitud de los vectores. En la misma linea, se implementó la función cosine_similarity como la métrica para medir similitud entre los vectores normalizados y los de consulta :
+- Se tiene en cuenta :
+1. Producto Punto: Calcula el grado de superposición entre los 2 vectores.
+2. Norma: Evalúa la magnitud de cada vector para normalizar la similitud.
+3. Manejo de Casos Especiales: Si alguno de los vectores es nulo (norma cero), la similitud se establece en 0.
+```  python
+def cosine_similarity(vec1, vec2):
+    Parameters:
+    vec1 (np.ndarray): Primer vector.
+    vec2 (np.ndarray): Segundo vector.
 
+    Returns:
+    float: Valor de la similitud de coseno entre vec1 y vec2.
+    """
+    # Producto punto de los vectores
+    dot_product = np.dot(vec1, vec2)
+    
+    # Norma (magnitud) de cada vector
+    norm_vec1 = np.linalg.norm(vec1)
+    norm_vec2 = np.linalg.norm(vec2)
+
+    # Verificación de vectores nulos
+    if norm_vec1 == 0 or norm_vec2 == 0:
+        return 0.0  # Evitar división por cero
+    # Similitud de coseno
+    return dot_product / (norm_vec1 * norm_vec2)
+``` 
 #### Implementación 
-
-El algoritmo KNN se implementó con dos métodos:
+El algoritmo KNN secuencial se implementó con dos métodos:
 
 - Búsqueda KNN: Se utilizó una cola de prioridad para encontrar los k vecinos más cercanos. Encargado de recupera los k objetos más cercanos al vector de consulta en términos de similitud de coseno.
+- Preproceso:
+- Se desarrolló la función que normaliza la matriz de centroides (definida como los vectores representativos de las imágenes) dividiendo cada fila por su norma. Para tener a los vectores en un soolo espacio unitario, como output tenemos a la misma matriz con los vectores normalizados.
+``` python
+def prepare_knn_model(centroids_matrix):
+    # Calcular las normas de cada centroid
+    norms = np.linalg.norm(centroids_matrix, axis=1, keepdims=True)
+    norms[norms == 0] = 1  # Evitar división por cero
+
+    normalized_centroids = centroids_matrix / norms
+    return normalized_centroids
+```
 - Proceso:
 1. Normalizar el vector de consulta y los vectores almacenados.
-2. Calcular las similitudes mediante el producto punto.
-3. Ordenar las similitudes y seleccionar los k valores más altos.
+2. Calcular las similitudes mediante el producto punto.Esto nos da un vector de similitudes para cada entrada.
+3. Ordenar en orden ascednete de las similitudes y seleccionar los K valores más altos.
+4. Map a nombres de imágenes para obtener sus índices seleccionados.
 
+- Se ha definido bajo la función `find_knn_cosine_optimized` , que recibe como paramentos la matriz de centroides normalizados (`normalized_centroids`), un map de nombres de imágenes índices a normalized_centorids(`index_map`), el vector de consulta pero sin normalizar (`query_centroid`) y el número definido para los vecinos que se busca encontrar más cercanos (`K`).
 ```python
-def find_knn_cosine_optimized(normalized_centroids, query_centroid, k=5):
+def find_knn_cosine_optimized(normalized_centroids, index_map, query_centroid, directory_path, k=5):
+    """
     query_norm = np.linalg.norm(query_centroid)
+    if query_norm == 0:
+        raise ValueError("El vector de consulta tiene norma cero.")
     normalized_query = query_centroid / query_norm
     similarities = normalized_centroids @ normalized_query
-    top_k_indices = np.argsort(-similarities)[:k]
-    return top_k_indices
+
+    if k >= len(similarities):
+        top_k_indices = np.argsort(-similarities)[:k]
+    else:
+        top_k_indices = np.argpartition(-similarities, k)[:k]
+        top_k_indices = top_k_indices[np.argsort(-similarities[top_k_indices])]
+    inv_index_map = {idx: name for name, idx in index_map.items()}
+    knn_results = [os.path.join(directory_path, inv_index_map[idx] + ".jpg") for idx in top_k_indices]
+    return knn_results
 ```
-
-- Búsqueda por Rango: Se seleccionaron objetos con similitudes de coseno dentro de un rango específico.
-
+- Búsqueda por Rango: Se seleccionaron objetos con similitudes de coseno dentro de un rango específico, siguiendo los siguientes pasos:
+1. Normalizar de igual forma que el anterio explicado.
+2. Cálculo de similitudes bajo la misma estrctura
 ``` python
-def find_knn_cosine_by_radio(normalized_centroids, query_centroid, radius):
-    query_norm = np.linalg.norm(query_centroid)
-    normalized_query = query_centroid / query_norm
-    similarities = normalized_centroids @ normalized_query
-    for idx, similarity in enumerate(similarities):
-        if similarity >= radius:
-            yield idx
+similarities = normalized_centroids @ normalized_query
+```
+4. Ordenamiento de mayor a menor para facilitar la búsqueda
+``` python
+sorted_indices = np.argsort(-similarities)
+sorted_similarities = similarities[sorted_indices]
+```
+5. Filtrado por rango para generar las rutas de las fotos que cumplen con las condiciones
+``` python
+for r in radius:
+    for i, similarity in zip(sorted_indices, sorted_similarities):
+        if similarity >= r:
+            yield image_path
 ```
 - Para presentar los resultados se muestra las imágenes recuperadas en una cuadrícula. Cada imagen se acompaña de su nombre como título.
+
 ``` python
 def display_images_in_grid(image_paths, grid_rows, grid_cols):
     fig, axes = plt.subplots(grid_rows, grid_cols, figsize=(grid_cols * 2, grid_rows * 2))
@@ -456,7 +574,125 @@ def display_images_in_grid(image_paths, grid_rows, grid_cols):
     plt.tight_layout()
     plt.show()
 ```
-- Se puede visualizar la ejecución correcta de ambas variaciones del algortimo KNN implementado en `p3_1_knnSeq.ipynb` en el apartado del Proyecto 3.
+-La ejecución de ambas variaciones del algoritmo KNN Secuencial (KNN con k fijo de vecinos y KNN por rango) se realizó y documentó en el archivo p3_1_knnSeq.ipynb. Este archivo es un Jupyter Notebook que proporciona una representación interactiva y detallada del funcionamiento de los algoritmos.
+
+### KNN R-Tree
+- Para la implementación de KNN utilizando un índice Rtree se ha tenido en cuenta mejorar la eficiencia en la búsqueda con estructuras indexadas en memoria y base de datos enfocado tanto en memoria como utilizando PostrgreSQL con la extensión cube que se detallará más adelante, además se ha utilizado la librería Rtree de Python para lograr los objetivos con funciones claves:
+``` python
+%pip install opencv-python matplotlib numpy scipy tqdm scikit-learn Rtree psycopg2 pandas
+```
+- En esto caso los vectores característicos globales generados previamente mediante el procesamiento de imággenes se caragaron desde un archivo comprimido 
+``` python
+import os
+import numpy as np
+
+file_name = "descriptors_color_global_opencv.npz"
+load_path = os.path.join(os.getcwd(), "data", file_name)
+features = np.load(load_path)
+```
+#### Creación del Índice Rtree en Memoria  
+- Se desarrolló una clase `RTreeSupportRAM` que permite:
+  1. Crear un índice Rtree en memoria, esto se logró con ayuda de la función `index.Index` de Python para inicializar el índice que almacena los vectores característicos. En este caso, se configura para trabajar con un espacio de 20 dimensiones, que corresponde al tamaño del vector de características.
+``` python
+def __init__(self):
+        p = index.Property()
+        p.dimension = 20  # Dimensión del índice (tamaño del vector)
+        self.idx_ram = index.Index(properties=p)  # Crear índice en memoria
+        self.insertions_count = 0
+```
+  3. Insertar vectores característicos como nodos con ayuda de la función `insert` de Python asóciandolo a un identificador único y un bounding box ( representa los límites del espacio del vector), además se pudo añadir metados en este caso el nombre de la imagen.
+``` python
+vector = [1.2, 2.3, 3.4, ..., 20.0]  # Vector de características
+unique_id = hash("image_name")  # Identificador único basado en el nombre de la imagen
+bbox = tuple(vector) + tuple(vector)  # Bounding box del vector
+idx_ram.insert(id=unique_id, coordinates=bbox, obj="image_name")
+```
+  5. Realizar consultas KNN locales o globales con ayuda de la función `nearest` de la librería permite retocar mucho más fácil los vecinos más cercanos  al punto de la query.
+``` python 
+def KNN_LOCAL(self, vector, k):
+        bbox = tuple(vector) + tuple(vector)
+        results = list(self.idx_ram.nearest(coordinates=bbox, num_results=k, objects=True))
+        return [res.object + '.jpg' for res in results]
+```
+- Esta es la implementación completa con el Indice Rtree de python.
+``` python
+from rtree import index
+from collections import defaultdict
+
+class RtreeSupportRAM:
+    def __init__(self):
+        p = index.Property()
+        p.dimension = 20  # Dimensión del índice (tamaño del vector)
+        self.idx_ram = index.Index(properties=p)  # Crear índice en memoria
+        self.insertions_count = 0
+
+    def insert(self, features):
+        for img_name, vector in features.items():
+            vector = [float(coord) for coord in vector]
+            bbox = tuple(vector) + tuple(vector)  # Bounding box
+            unique_id = hash(img_name)
+            self.idx_ram.insert(id=unique_id, coordinates=bbox, obj=img_name)
+            self.insertions_count += 1
+
+```
+- Ejecución, siguiendo los pasós de inicializar, poblar el índice y preparar la estructura
+  
+``` python
+tree_wrapper = RtreeSupportRAM()
+tree_wrapper.insert(features)  # Inserción de vectores
+```
+- En el caso de prueba se realizó una consulta de 10 vecinos más cercanos siguiendo esta estructura
+```
+query_path = os.path.join(directory_path, "1329670.jpg")
+_, query = process_image_global(query_path)
+result = tree_wrapper.KNN_LOCAL(query, 10)
+result = [os.path.join(directory_path, name) for name in result]
+display_images_in_grid(result, 3, 3)
+```
+#### Uso de Rtree con PostgreSQL 
+- Conexión a la base de datos: se configuró PostgreSql para almacenar y consular vectores caracterísiticos con la extensión `cube`
+``` python
+import psycopg2
+conn = psycopg2.connect(
+    host="localhost",
+    database="",
+    user="postgres",
+    password="",
+    port="5432"
+)
+schema = "project_anime"
+```
+- Creación de tablas: se creó una tabla para que la extensión almacene los vectores
+``` sql 
+CREATE SCHEMA IF NOT EXISTS project_anime;
+
+CREATE EXTENSION IF NOT EXISTS cube SCHEMA project_anime;
+
+CREATE TABLE IF NOT EXISTS project_anime.faces (
+    id SERIAL,
+    image_name VARCHAR(20) NOT NULL,
+    vector project_anime.cube,
+    vector_idx project_anime.cube,
+    PRIMARY KEY (id, image_name)
+);
+``` 
+- Se definió una función para realizar consultas KNN mediante SQL
+``` python
+def execute_single_query(vector, k=5):
+    vector_str = ', '.join(map(str, vector))
+    sql_str = f"""
+        SET search_path to project_anime;
+        SELECT id, image_name, cube_distance(vector_idx, '({vector_str})') AS D
+        FROM faces
+        ORDER BY vector_idx <-> '({vector_str})'
+        LIMIT {k};
+    """
+    df, rows = ejecutar_consulta(sql_str, select=True)
+    return [os.path.join(directory_path, element + '.jpg') for _, element, _ in rows]
+ ```  
+- Se exportaron los vectores a archivo llamado `features_for_rtree.csv` para poder realizar la inserción de los datos en la tabla `faces`
+- En la sección de experimentación se podrá realizar las comparaciones y verificar la efectividad de la implementación.
+
 
 ### 2. GUI búsqueda de imágenes
 
