@@ -691,9 +691,14 @@ def execute_single_query(vector, k=5):
     return [os.path.join(directory_path, element + '.jpg') for _, element, _ in rows]
  ```  
 - Se exportaron los vectores a archivo llamado `features_for_rtree.csv` para poder realizar la inserción de los datos en la tabla `faces`
-- En la sección de experimentación se podrá realizar las comparaciones y verificar la efectividad de la implementación.
+- En la sección de experimentación se podrá realizar las comparaciones y verificar la efectividad de la implementación, teniendo en cuenta que se utilizaron descriptores globales de dimensión baja, y se 
 
-
+## Análisis de maldición de la dimensionalidad 
+### KNN-HIGHD 
+- Partiendo del hecho de que un índice para espacios vectoriales reduce
+su eficiencia con dimensiones muy altas (maldición de dimensionalidad) se experimentó con formas para mitigar este problema orientado a nuestro proyecto.Se trabajó con LSH(Locality Sensitive Hashing) y con IVF (Inverted File).
+- Las implementaciones respectivas se encuentran estructuradas y definidas en el apartado Proyecto3, ambas se encuentran en entornos de ejecución de Jupyter Notebook, por lo que su visualización es más práctica
+- En base al análisis se concluye que de acuerdo a los resultados 
 ### 2. GUI búsqueda de imágenes
 
 Antes de poder usar la búsqueda de imágenes, en `/Proyecto3/src/Searching/KnnRtree_sql.py` debe ingresar sus credenciales para conectarse a la base de datos. Además debe ejecutar el SQL script en `Rtree_Script.sql`. Una vez hecho esto, ejecutar la aplicación.
@@ -736,7 +741,7 @@ Los resultados obtenidos de las comparaciones de tiempo de ejecución entre las 
 
 
 #### Gráfica Comparativa de tiempos de ejecución 
-<img src="Proyecto3/knn_methods_comparison_.png" width="800px">
+<img src="" width="800px">
 
 ##### Interpretación de la Gráfica
 - En términos de :
@@ -747,30 +752,46 @@ Los resultados obtenidos de las comparaciones de tiempo de ejecución entre las 
 ### Índice Multidimensional
 - A continuación, se muestra una comparativa en tiempos de ejecución de cada implementación KNN (K-Nearest Neighbors) según # de registros. En todos los casos, se mantendrá el K =8.
 
-| N          | KNN Sequential | KNN Rtree   | KNN HighD  |
-|------------|----------------|-------------|------------|
-| N=1000     |                |             |            |
- N=2000      |                |             |            |
-| N=4000     |                |             |            |
-| N=8000     |                |             |            | 
-| N=10000    |                |             |            |
-| N=12000    |                |             |            |
-| N=14000    |                |             |            |
+| N      | KNN Sequential | SeqRango 0.5 | KNN Rtree   | KNN IVF    | KNN LSH    |
+|--------|----------------|--------------|-------------|------------|------------|
+| 1000   | 0.0169995      | 0.0693202    | 0.00300026  | 0.02475    | 0.00100064 |
+| 34516  | 0.0289996      | 0.147959     | 0.00401092  | 0.0880001  | 0.000999689|
+| 68033  | 0.0390005      | 0.440984     | 0.00700021  | 0.155      | 0.00699735 |
+| 101550 | 0.0609937      | 0.591978     | 0.00898266  | 0.236139   | 0.00158119 |
+| 135067 | 0.0729997      | 0.777791     | 0.0105174   | 0.31101    | 0.00400162 |
+| 168584 | 0.0780001      | 1.28419      | 0.0128055   | 0.383813   | 0.00200033 |
+| 202101 | 0.0899994      | 1.04173      | 0.0145254   | 0.49196    | 0.00200033 |
+| 235618 | 0.095          | 1.67749      | 0.0171254   | 0.568001   | 0.00154185 |
+| 269135 | 0.108001       | 1.07664      | 0.0175843   | 0.649      | 0.00100064 |
+| 302652 | 0.118          | 1.56874      | 0.0181425   | 0.729816   | 0.000999689|
+
 
 
 ### Interpretación de Resultados
-#### Comparación de Tiempos de Ejecución
-- **Secuencial**:
-- **KNN-RTree**:
-- **KNN-HighD**:
-
 #### Gráfica Comparativa de tiempos de ejecución 
-<img src=" " width="800px">
+En esta gráfica se comparan las técnicas utilizadas para realizar consultas KNN en términos de tiempos de ejecución.Las técnicas evaluadas son:
+-KNN Sequential (Secuencial): Implementación basada en una cola de prioridad.
+-KNN Secuencial por Rango (SeqRango 0.5): Implementación secuencial que busca vecinos dentro de un radio fijo de 0.5.
+-RTree: Índice multidimensional diseñado para optimización espacial.
+-LSH (Locality Sensitive Hashing): Optimización para alta dimensionalidad.
+-IVF (Inverted File): Estrategia eficiente basada en listas invertidas.
+
+<img src="Proyecto3/knn_methods_comparison_.png " width="800px">
 ##### Interpretación de la Gráfica
 En términos de :
-- Escabilidad
-- Eficiencia 
-- Adaptación de Índice
+- **Escabilidad: **
+-  El secuencial por rango tiene un aumento exponencial del tiempo conforme crece el tamaño de la muestra, cosa que es entendible por la validación del rango.
+- IVF y Sequential: Ambas presentan una escalabilidad moderada, pero la estructura de IVF le tiene una ligera ventaja frente a Sequential.
+- RTree y LSH: Estas técnicas tienen las curvas más planas, siendo las más escalables. LSH sobresale en datos grandes por su diseño para alta dimensionalidad.
+
+- **Eficiencia** :
+- LSH es la más eficiente con tamaños grandes por su capacidad de manejar consultas rápidas.
+- IVF es eficiente en tamaños pequeños pero luego pierde ventaja frente a LSH y RTree en tamaños grandes.
+- **Adaptación de Índice**:
+- La secuencial por rango es limitada a búsquedas simples y su rendimiento decrece con datos grandes
+- IVF se adapta a datos medianos y grandes, pero requiere el costo de la construcción previa de las listas invertidas
+- RTREE Y LSH son las mmás adaptables ya que RTREE es versatil en diferentes tamaños y tipos de cosnulta, mientras que LSH es buena para datos complejos de alta dimension
+- Sequential termina siendo una opción básica para búsquedas iniciales.
 
 ## Integrantes
 |                    **Paolo Medrano Terán**                   |                          **Sebastián Chu**                          |                         **Fabricio Chavez**                          |                         **Andrea Coa**                         |                       **Jesús Ore Eguzquiza**                       |
