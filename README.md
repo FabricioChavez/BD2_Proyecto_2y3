@@ -736,7 +736,8 @@ Los resultados obtenidos de las comparaciones de tiempo de ejecución entre las 
 
 
 #### Gráfica Comparativa de tiempos de ejecución 
-<img src=" " width="800px">
+<img src="Proyecto3/knn_methods_comparison_.png" width="800px">
+
 ##### Interpretación de la Gráfica
 - En términos de :
 - Escabilidad
