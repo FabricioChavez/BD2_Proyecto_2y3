@@ -327,8 +327,8 @@ def specific_block(self, position, size):
 ```
 - Este método obtiene un bloque específico del archivo de índice final, según posición y tamaño.
 
-### 2.*Ejecución de consultas **
-- Antes de proceder con la ejemplificación de como se realizan las consultas, explicaremo como se dió la creación de la tabla en PostgreSQL para almacenar información sobre mangas, con los siguientes campos:
+### 2. Ejecución de consultas
+- Antes de proceder con la ejemplificación de como se realizan las consultas, explicaremos como se dió la creación de la tabla en PostgreSQL para almacenar información sobre mangas, con los siguientes campos:
 - 
 - **title**: Título del manga.
 - **description**: Descripción del manga.
@@ -370,6 +370,12 @@ Para cada registro de manga, se genera un tsvector combinando el texto de la col
 -- Generar tsvector para la columna merge
 UPDATE manga SET merge_vector = to_tsvector('english', merge);
 ```
+
+### 3. Comparacion de Tiempos
+<img src="Proyecto2/comparison.png " width="800px">
+
+### 4. Ejecución
+Para poder ejecutar la aplicacion se requieren 2 cosas: El Indice SPIMI y la base de datos en POSTGRES. El Indice del SPIMI ya esta situado en la carpeta del proyecto, por lo que solo faltaría la base de datos de postgres y la tabla donde se ejecutan las consultas. Para solucionar esto, se ha creado un archivo ```postgres_config.ipynb```. Solo hace falta ejecutar las celdas del Jupyter Notebook y ya se tendrá la base de datos con la tabla lista para ejecutar. Con eso, solo hace falta usar el comando: ```python app.py``` dentro de la carpeta del proyecto 2.
 
 ## Índice Multidimensional
 ### KNN Secuencial
