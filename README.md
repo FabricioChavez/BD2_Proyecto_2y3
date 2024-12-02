@@ -377,6 +377,8 @@ UPDATE manga SET merge_vector = to_tsvector('english', merge);
 ### 4. Ejecución
 Para poder ejecutar la aplicacion se requieren 2 cosas: El Indice SPIMI y la base de datos en POSTGRES. El Indice del SPIMI ya esta situado en la carpeta del proyecto, por lo que solo faltaría la base de datos de postgres y la tabla donde se ejecutan las consultas. Para solucionar esto, se ha creado un archivo ```postgres_config.ipynb```. Solo hace falta ejecutar las celdas del Jupyter Notebook y ya se tendrá la base de datos con la tabla lista para ejecutar. Con eso, solo hace falta usar el comando: ```python app.py``` dentro de la carpeta del proyecto 2.
 
+<img src="Proyecto2/frontend.png " width="800px">
+
 ## Índice Multidimensional
 ### KNN Secuencial
 - El algoritmo K-Nearest Neighbors (KNN) se implementó para realizar búsquedas eficientes de objetos similares a una consulta, utilizando la métrica de similitud de coseno. A continuación se detalla lo desarrollado para el proyecto:
