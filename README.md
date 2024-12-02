@@ -778,20 +778,23 @@ En esta gráfica se comparan las técnicas utilizadas para realizar consultas KN
 
 <img src="Proyecto3/knn_methods_comparison_.png " width="800px">
 ##### Interpretación de la Gráfica
-En términos de :
-- **Escabilidad: **
--  El secuencial por rango tiene un aumento exponencial del tiempo conforme crece el tamaño de la muestra, cosa que es entendible por la validación del rango.
-- IVF y Sequential: Ambas presentan una escalabilidad moderada, pero la estructura de IVF le tiene una ligera ventaja frente a Sequential.
-- RTree y LSH: Estas técnicas tienen las curvas más planas, siendo las más escalables. LSH sobresale en datos grandes por su diseño para alta dimensionalidad.
+En términos de:
 
-- **Eficiencia** :
-- LSH es la más eficiente con tamaños grandes por su capacidad de manejar consultas rápidas.
-- IVF es eficiente en tamaños pequeños pero luego pierde ventaja frente a LSH y RTree en tamaños grandes.
+- **Escalabilidad**:
+  - El secuencial por rango tiene un aumento exponencial del tiempo conforme crece el tamaño de la muestra, cosa que es entendible por la validación del rango.
+  - IVF y Sequential: Ambas presentan una escalabilidad moderada, pero la estructura de IVF le da una ligera ventaja frente a Sequential.
+  - RTree y LSH: Estas técnicas tienen las curvas más planas, siendo las más escalables. LSH sobresale en datos grandes por su diseño para alta dimensionalidad.
+
+- **Eficiencia**:
+  - LSH es la más eficiente con tamaños grandes por su capacidad de manejar consultas rápidas.
+  - IVF es eficiente en tamaños pequeños pero luego pierde ventaja frente a LSH y RTree en tamaños grandes.
+
 - **Adaptación de Índice**:
-- La secuencial por rango es limitada a búsquedas simples y su rendimiento decrece con datos grandes
-- IVF se adapta a datos medianos y grandes, pero requiere el costo de la construcción previa de las listas invertidas
-- RTREE Y LSH son las mmás adaptables ya que RTREE es versatil en diferentes tamaños y tipos de cosnulta, mientras que LSH es buena para datos complejos de alta dimension
-- Sequential termina siendo una opción básica para búsquedas iniciales.
+  - La secuencial por rango es limitada a búsquedas simples y su rendimiento decrece con datos grandes.
+  - IVF se adapta a datos medianos y grandes, pero requiere el costo de la construcción previa de las listas invertidas.
+  - RTree y LSH son las más adaptables, ya que RTree es versátil en diferentes tamaños y tipos de consulta, mientras que LSH es buena para datos complejos de alta dimensión.
+  - Sequential termina siendo una opción básica para búsquedas iniciales.
+
 
 ## Integrantes
 |                    **Paolo Medrano Terán**                   |                          **Sebastián Chu**                          |                         **Fabricio Chavez**                          |                         **Andrea Coa**                         |                       **Jesús Ore Eguzquiza**                       |
