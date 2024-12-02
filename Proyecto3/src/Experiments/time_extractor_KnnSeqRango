@@ -6,7 +6,7 @@ from Searching.KnnSeq import prepare_knn_model, find_knn_cosine_by_radio
 import time
 import csv
 
-def run_knn_seq_experiment():
+def run_knn_seq_ran_experiment():
     directory_path = os.path.join("D:/", "PROYECTO BD2", "BD2_Proyecto_2y3", "DB2_Proyect", "portraits") 
     index_path = os.path.join("D:/", "PROYECTO BD2", "BD2_Proyecto_2y3", "Proyecto3", "data", "data", "index_dict_color_cv.npz")
     vector_path = os.path.join("D:/", "PROYECTO BD2", "BD2_Proyecto_2y3", "Proyecto3", "data", "data", "feature_vector_color_cv.npy")
@@ -56,7 +56,7 @@ def run_knn_seq_experiment():
         normalized_features = prepare_knn_model(features)
 
         start_time = time.time()
-        results = list(find_knn_cosine_by_radio(normalized_features, index_dict, query, directory_path, radius=[0.2, 0.5, 0.9]))
+        results = list(find_knn_cosine_by_radio(normalized_features, index_dict, query, directory_path, radius=[0.5]))
         if not results:
             print(f"No se encontraron vecinos para tamaño de muestra {sample_size}")
         times[idx] = time.time() - start_time
@@ -73,6 +73,5 @@ def run_knn_seq_experiment():
     output_path = os.path.join(os.getcwd(), "src", "Experiments", "times")
     save_timing_data(sizes, times, output_path)
     print("Guardado en ...", output_path)
-
 if __name__ == "__main__":
-    run_knn_seq_experiment()
+    run_knn_seq_ran_experiment()
